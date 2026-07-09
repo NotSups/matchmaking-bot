@@ -33,7 +33,7 @@ export async function handleButton(ctx: BotContext, interaction: ButtonInteracti
         await interaction.reply({ content: "❌ Aucune recherche en mémoire. Relance `/match`.", ephemeral: true });
         return;
       }
-      const match = await ctx.matchmaker.enqueue(entryFrom(interaction, prefs));
+      const match = await ctx.matchmaker.enqueue(entryFrom(ctx, interaction, prefs));
       if (match) {
         await ctx.sessions.createForMatch(match);
         await announceMatch(ctx, match);

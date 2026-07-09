@@ -200,7 +200,7 @@ export async function handlePanelButton(ctx: BotContext, interaction: ButtonInte
   const p = prefsOf(userId);
 
   if (interaction.customId === "panel:join") {
-    const match = await ctx.matchmaker.enqueue(entryFrom(interaction, { ...p, languages: [], interests: [] }));
+    const match = await ctx.matchmaker.enqueue(entryFrom(ctx, interaction, { ...p, languages: [], interests: [] }));
     if (match) {
       await ctx.sessions.createForMatch(match);
       await announceMatch(ctx, match);

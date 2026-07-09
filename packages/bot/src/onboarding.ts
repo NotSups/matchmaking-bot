@@ -244,7 +244,7 @@ export class OnboardingManager {
         languages: [...state.languages],
         interests: [...state.interests],
       };
-      const match = await this.ctx.matchmaker.enqueue(entryFrom(interaction, prefs));
+      const match = await this.ctx.matchmaker.enqueue(entryFrom(this.ctx, interaction, prefs));
       if (match) {
         await this.ctx.sessions.createForMatch(match);
         await announceMatch(this.ctx, match);
