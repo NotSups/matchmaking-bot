@@ -5,7 +5,9 @@ const { spawnSync } = require("node:child_process");
 const { join } = require("node:path");
 
 const entry = join(__dirname, "packages", "bot", "src", "index.ts");
-const res = spawnSync(process.execPath, ["--import", "tsx", entry], {
+const tsxBin = join(__dirname, "node_modules", ".bin", "tsx");
+
+const res = spawnSync(tsxBin, [entry], {
   stdio: "inherit",
   cwd: __dirname,
 });
