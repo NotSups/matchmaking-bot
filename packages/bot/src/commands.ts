@@ -18,7 +18,7 @@ export interface Command {
 const splitList = (s?: string): string[] =>
   s ? s.split(",").map((x) => x.trim()).filter(Boolean) : [];
 
-function entryFrom(
+export function entryFrom(
   ctx: BotContext,
   interaction: ChatInputCommandInteraction,
   prefs: MatchPreferences,
