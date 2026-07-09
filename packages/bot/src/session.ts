@@ -8,7 +8,7 @@ import {
 import type { Client, Message, GuildMember } from "discord.js";
 import type { Match } from "@matchmaking/core";
 import type { Storage } from "@matchmaking/core";
-import { logger } from "../logger.js";
+import { logger } from "./logger.js";
 
 interface Session {
   match: Match;
