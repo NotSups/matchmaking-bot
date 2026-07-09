@@ -1,0 +1,241 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Users & Profiles
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String   @id // Discord snowflake
+  username      String
+  globalName    String?
+  avatar        String?
+  createdAt     DateTime @default(now())
+  lastSeenAt    DateTime @default(now())
+
+  profile       Profile?
+  sentReports   Report[]        @relation("Reporter")
+  receivedReports Report[]      @relation("Reported")
+  blocksMade    Block[]         @relation("Blocker")
+  blocksReceived Block[]        @relation("Blocked")
+  matchesA      Match[]         @relation("MatchUserA")
+  matchesB      Match[]         @relation("MatchUserB")
+  friendships   Friendship[]    @relation("FriendA")
+  friendshipsB  Friendship[]    @relation("FriendB")
+  globalBans    Ban[]           @relation("GlobalBanUser")
+  localBans     Ban[]           @relation("LocalBanUser")
+  mutes         Mute[]
+
+  @@index([lastSeenAt])
+}
+
+model Profile {
+  userId        String   @id
+  bio           String?  @db.Text
+  age           Int?
+  gender        String?
+  pronouns      String?
+  languages     String[] @default([])
+  interests     String[] @default([])
+  country       String? // ISO-3166 alpha-2
+  timezone      String? // IANA tz, e.g. "Europe/Paris"
+
+  // Economy / reputation
+  xp            Int      @default(0)
+  level         Int      @default(1)
+  reputation    Int      @default(100)
+  likesReceived Int      @default(0)
+  reportsReceived Int    @default(0)
+  totalMatches  Int      @default(0)
+  totalTalkSeconds Int   @default(0)
+  isPremium     Boolean  @default(false)
+  premiumUntil  DateTime?
+  customColor   String?  @db.Char(7) // #RRGGBB
+  badges        String[] @default([])
+
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([country])
+  @@index([level])
+}
+
+// ---------------------------------------------------------------------------
+// Guild configuration (per-server matchmaking settings)
+// ---------------------------------------------------------------------------
+
+model GuildConfig {
+  guildId              String   @id
+  defaultScope         MatchScope @default(GLOBAL)
+  enableText           Boolean  @default(true)
+  enableVoice          Boolean  @default(false)
+  premiumOnly          Boolean  @default(false)
+  maxConversationSeconds Int    @default(0) // 0 = unlimited
+  maxMatchesPerHour    Int      @default(0) // 0 = unlimited
+  wordBlacklist        String[] @default([])
+  partnerGuildIds      String[] @default([]) // linked partner servers
+  categoryChannelId    String?  // where private channels are created
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Matches
+// ---------------------------------------------------------------------------
+
+model Match {
+  id              String   @id @default(cuid())
+  userA           String
+  userB           String
+  mode            MatchMode
+  scope           MatchScope
+  guildA          String?
+  guildB          String?
+  channelA        String? // text channel id (guild A side)
+  channelB        String? // text channel id (guild B side)
+  voiceChannelA   String?
+  voiceChannelB   String?
+  startedAt       DateTime @default(now())
+  endedAt         DateTime?
+  durationSeconds Int?
+  rating          Int?     @db.SmallInt // 1..5
+  liked           Boolean?
+  reported        Boolean  @default(false)
+
+  userARel        User     @relation("MatchUserA", fields: [userA], references: [id], onDelete: Cascade)
+  userBRel        User     @relation("MatchUserB", fields: [userB], references: [id], onDelete: Cascade)
+  reports         Report[]
+
+  @@index([userA])
+  @@index([userB])
+  @@index([startedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Moderation
+// ---------------------------------------------------------------------------
+
+model Block {
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+  @@index([blockedId])
+}
+
+model Ban {
+  id        String   @id @default(cuid())
+  userId    String
+  scope     BanScope
+  guildId   String?
+  reason    String?
+  until     DateTime? // null = permanent
+  createdAt DateTime @default(now())
+  user      User     @relation("GlobalBanUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, scope])
+  @@index([guildId])
+}
+
+model Mute {
+  id        String   @id @default(cuid())
+  userId    String
+  guildId   String
+  until     DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, guildId])
+}
+
+model Report {
+  id        String   @id @default(cuid())
+  reporterId String
+  targetId  String
+  matchId   String?
+  reason    ReportReason
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+  reporter  User     @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  target    User     @relation("Reported", fields: [targetId], references: [id], onDelete: Cascade)
+  match     Match?   @relation(fields: [matchId], references: [id], onDelete: SetNull)
+
+  @@index([targetId])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Social (friends) & Achievements
+// ---------------------------------------------------------------------------
+
+model Friendship {
+  userA     String
+  userB     String
+  createdAt DateTime @default(now())
+  a         User     @relation("FriendA", fields: [userA], references: [id], onDelete: Cascade)
+  b         User     @relation("FriendB", fields: [userB], references: [id], onDelete: Cascade)
+
+  @@id([userA, userB])
+}
+
+model Badge {
+  id          String   @id
+  label       String
+  description String?
+  icon        String?
+  premium     Boolean  @default(false)
+}
+
+// ---------------------------------------------------------------------------
+// Activity log (feeds the dashboard real-time views)
+// ---------------------------------------------------------------------------
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  type      String // "match_start" | "match_end" | "join_queue" | "report" | "ban" | ...
+  guildId   String?
+  userId    String?
+  payload   Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([type])
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum MatchMode {
+  TEXT
+  VOICE
+  BOTH
+}
+
+enum MatchScope {
+  GLOBAL
+  GUILD
+  PARTNER
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  INAPPROPRIATE
+  BOT
+  OTHER
+}
+
+enum BanScope {
+  GLOBAL
+  LOCAL
+}
