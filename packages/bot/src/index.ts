@@ -6,6 +6,7 @@ import { config } from "./config.js";
 import { logger } from "./logger.js";
 import { createContext } from "./ctx.js";
 import { commands } from "./commands.js";
+import { setupCommand } from "./setup.js";
 import { handleButton, handleReportModal } from "./buttons.js";
 import { OnboardingManager, createWelcomeChannel } from "./onboarding.js";
 import { panelCommand, handlePanelButton, handlePanelSelect, initLivePanels } from "./panel.js";
@@ -50,7 +51,7 @@ client.once(Events.ClientReady, async (c) => {
 client.on(Events.InteractionCreate, async (interaction: Interaction) => {
   try {
     if (interaction.isChatInputCommand()) {
-      const allCommands = [...commands, panelCommand];
+      const allCommands = [...commands, panelCommand, setupCommand];
       const cmd = allCommands.find((c) => c.data.name === interaction.commandName);
       if (cmd) await cmd.execute(ctx, interaction);
       return;
