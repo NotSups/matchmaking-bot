@@ -34,7 +34,7 @@ async function deployCommands(): Promise<void> {
     return;
   }
   const rest = new REST({ version: "10" }).setToken(config.DISCORD_TOKEN);
-  const allCommands = [...commands, panelCommand];
+  const allCommands = [...commands, panelCommand, setupCommand];
   try {
     await rest.put(Routes.applicationCommands(config.DISCORD_CLIENT_ID), { body: allCommands.map((c) => c.data) });
     logger.info("Commandes slash déployées (global).");
