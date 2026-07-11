@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type {
+  Confession,
   CoreProfile,
   CoreUser,
   MatchRecord,
@@ -15,7 +16,8 @@ export class InMemoryStorage implements Storage {
   private bans = new Map<string, { scope: "GLOBAL" | "LOCAL"; guildId?: string }>();
   private matches = new Map<string, MatchRecord & { endedAt?: number; durationSeconds?: number }>();
   private reports = new Set<string>();
-  private activity: { type: string; at: number }[] = [];
+  private activity: { type: string; at: number; payload?: Record<string, unknown> }[] = [];
+  private confessions = new Map<string, Confession[]>();
 
   async upsertUser(user: CoreUser): Promise<void> {
     this.users.set(user.id, user);
@@ -27,6 +29,10 @@ export class InMemoryStorage implements Storage {
 
   async upsertProfile(profile: CoreProfile): Promise<void> {
     this.profiles.set(profile.userId, profile);
+  }
+
+  async getAllProfiles(): Promise<CoreProfile[]> {
+    return [...this.profiles.values()];
   }
 
   async isBlocked(a: string, b: string): Promise<boolean> {
@@ -65,8 +71,8 @@ export class InMemoryStorage implements Storage {
     this.reports.add(randomUUID());
   }
 
-  async logActivity(type: string): Promise<void> {
-    this.activity.push({ type, at: Date.now() });
+  async logActivity(type: string, payload?: Record<string, unknown>): Promise<void> {
+    this.activity.push({ type, at: Date.now(), payload });
   }
 
   async getStats(): Promise<PlatformStats> {
@@ -79,9 +85,19 @@ export class InMemoryStorage implements Storage {
     }
     return {
       matchesToday,
-      waiting: 0, // filled by the Matchmaker (pool size)
+      waiting: 0,
       activeMatches,
       onlineUsers: this.users.size,
     };
+  }
+
+  async addConfession(c: Confession): Promise<void> {
+    const list = this.confessions.get(c.channelId) ?? [];
+    list.push(c);
+    this.confessions.set(c.channelId, list);
+  }
+
+  async getConfessions(channelId: string, limit = 10): Promise<Confession[]> {
+    return (this.confessions.get(channelId) ?? []).slice(-limit);
   }
 }

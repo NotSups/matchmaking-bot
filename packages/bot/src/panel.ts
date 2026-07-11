@@ -25,7 +25,6 @@ interface PanelPrefs {
 
 const DEFAULTS: PanelPrefs = { mode: "TEXT", scope: "GLOBAL" };
 const userPrefs = new Map<string, PanelPrefs>();
-const WHITE = 0xffffff;
 
 /** One fixed panel per channel (the public kiosk). */
 const channelPanels = new Map<string, string>();
@@ -47,9 +46,15 @@ export async function buildSharedPanelEmbeds(ctx: BotContext): Promise<EmbedBuil
   const stored = await ctx.storage.getStats();
 
   const hero = new EmbedBuilder()
-    .setTitle("🤝  Matchmaking Platform")
+    .setTitle("🚀  Matchmaking Platform")
     .setDescription(
       [
+        "`````````````````````````````````````````````````",
+        "     ╔═══════════════════════════════════╗",
+        "     ║   🤝  MATCHMAKING  ·  PREMIUM  🤝  ║",
+        "     ╚═══════════════════════════════════╝",
+        "`````````````````````````````````````````````````",
+        "",
         "**Bienvenue sur le panel officiel du serveur.**",
         "Rencontre des inconnus du monde entier, en texte ou en vocal,",
         "via des salons privés créés automatiquement.",
@@ -58,46 +63,58 @@ export async function buildSharedPanelEmbeds(ctx: BotContext): Promise<EmbedBuil
         "Ton match et tes actions sont personnels et restent privés — ce panneau est partagé par tous.",
       ].join("\n"),
     )
-    .setColor(WHITE)
+    .setColor(0x5865f2)
+    .setThumbnail(ctx.client.user.displayAvatarURL())
     .addFields(
-      { name: "⏳ En file (total)", value: String(waiting), inline: true },
-      { name: "💬 Matchs actifs", value: String(active), inline: true },
-      { name: "📅 Matchs aujourd'hui", value: String(stored.matchesToday), inline: true },
-      { name: "👥 Utilisateurs en ligne", value: String(stored.onlineUsers), inline: true },
+      { name: "⏳ En file", value: `**${waiting}**`, inline: true },
+      { name: "💬 Actifs", value: `**${active}**`, inline: true },
+      { name: "📅 Aujourd'hui", value: `**${stored.matchesToday}**`, inline: true },
+      { name: "👥 En ligne", value: `**${stored.onlineUsers}**`, inline: true },
     )
-    .setFooter({ text: "Matchmaking Platform · mis à jour en temps réel" })
+    .setFooter({ text: "Matchmaking Platform • Mis à jour en temps réel" })
     .setTimestamp(new Date());
 
   const scopeLines = (["GLOBAL", "GUILD", "PARTNER"] as const)
     .map((s) => {
       const n = pool[s] ?? 0;
-      return `${s.padEnd(8)} ${bar(n > 0 ? Math.min(100, n * 25) : 0, 8)} ${n}`;
+      const emoji = s === "GLOBAL" ? "🌍" : s === "GUILD" ? "🏠" : "🤝";
+      return `${emoji} ${s.padEnd(8)} ${bar(n > 0 ? Math.min(100, n * 25) : 0, 8)} ${n}`;
     })
     .join("\n");
 
   const stats = new EmbedBuilder()
     .setTitle("📊  Statistiques en direct")
-    .setColor(WHITE)
+    .setColor(0x2ecc71)
+    .setDescription(
+      [
+        "`````````````````````````````````````````````````",
+        "          📊  STATISTIQUES  EN  DIRECT",
+        "`````````````````````````````````````````````````",
+      ].join("\n"),
+    )
     .addFields(
-      { name: "👥 En ligne", value: String(stored.onlineUsers), inline: true },
-      { name: "⏳ En attente", value: String(waiting), inline: true },
-      { name: "💬 Matchs actifs", value: String(active), inline: true },
-      { name: "📅 Matchs aujourd'hui", value: String(stored.matchesToday), inline: true },
+      { name: "👥 En ligne", value: `**${stored.onlineUsers}**`, inline: true },
+      { name: "⏳ En attente", value: `**${waiting}**`, inline: true },
+      { name: "💬 Actifs", value: `**${active}**`, inline: true },
+      { name: "📅 Aujourd'hui", value: `**${stored.matchesToday}**`, inline: true },
       { name: "🌐 File par portée", value: `\`\`\`\n${scopeLines}\n\`\`\``, inline: false },
     );
 
   const guide = new EmbedBuilder()
     .setTitle("❓  Comment ça marche")
-    .setColor(WHITE)
+    .setColor(0xf1c40f)
     .setDescription(
       [
-        "1. Complète ton profil avec `/profile`.",
-        "2. Choisis **mode** et **portée** dans les menus ci-dessous.",
-        "3. Clique **🚀 Rejoindre la file** : dès qu'un partenaire est trouvé, un salon privé est créé pour toi.",
-        "4. Pendant le match : **Next**, **Leave**, **Block**, **Report** sont disponibles.",
-        "5. L'onboarding t'a guidé·e à ton arrivée — tu peux y revenir via `/panel`.",
+        "```",
+        "  1️⃣  Complète ton profil avec `/profile`.",
+        "  2️⃣  Choisis **mode** et **portée** dans les menus ci-dessous.",
+        "  3️⃣  Clique **🚀 Rejoindre la file**.",
+        "  4️⃣  Dès qu'un partenaire est trouvé, un salon privé est créé.",
+        "  5️⃣  Profite de la conversation !",
+        "```",
         "",
-        "Commandes : `/profile` · `/panel` · `/queue` · `/next` · `/leave` · `/report` · `/block` · `/help`",
+        "**Commandes disponibles :**",
+        "`/profile` · `/match` · `/stats` · `/leaderboard` · `/daily` · `/confess` · `/help`",
       ].join("\n"),
     );
 
@@ -114,20 +131,20 @@ export function buildPanelComponents(userId: string): ActionRowBuilder<ButtonBui
 
   const modeMenu = new StringSelectMenuBuilder()
     .setCustomId("panel:mode")
-    .setPlaceholder(`Mode : ${p.mode}`)
+    .setPlaceholder(`📝 Mode : ${p.mode}`)
     .addOptions(
-      new StringSelectMenuOptionBuilder().setLabel("Texte").setValue("TEXT").setDefault(p.mode === "TEXT"),
-      new StringSelectMenuOptionBuilder().setLabel("Vocal").setValue("VOICE").setDefault(p.mode === "VOICE"),
-      new StringSelectMenuOptionBuilder().setLabel("Texte + Vocal").setValue("BOTH").setDefault(p.mode === "BOTH"),
+      new StringSelectMenuOptionBuilder().setLabel("📝 Texte").setValue("TEXT").setDefault(p.mode === "TEXT"),
+      new StringSelectMenuOptionBuilder().setLabel("🎤 Vocal").setValue("VOICE").setDefault(p.mode === "VOICE"),
+      new StringSelectMenuOptionBuilder().setLabel("📝🎤 Texte + Vocal").setValue("BOTH").setDefault(p.mode === "BOTH"),
     );
 
   const scopeMenu = new StringSelectMenuBuilder()
     .setCustomId("panel:scope")
-    .setPlaceholder(`Portée : ${p.scope}`)
+    .setPlaceholder(`🌍 Portée : ${p.scope}`)
     .addOptions(
-      new StringSelectMenuOptionBuilder().setLabel("Mondial").setValue("GLOBAL").setDefault(p.scope === "GLOBAL"),
-      new StringSelectMenuOptionBuilder().setLabel("Serveur").setValue("GUILD").setDefault(p.scope === "GUILD"),
-      new StringSelectMenuOptionBuilder().setLabel("Partenaires").setValue("PARTNER").setDefault(p.scope === "PARTNER"),
+      new StringSelectMenuOptionBuilder().setLabel("🌍 Mondial").setValue("GLOBAL").setDefault(p.scope === "GLOBAL"),
+      new StringSelectMenuOptionBuilder().setLabel("🏠 Serveur").setValue("GUILD").setDefault(p.scope === "GUILD"),
+      new StringSelectMenuOptionBuilder().setLabel("🤝 Partenaires").setValue("PARTNER").setDefault(p.scope === "PARTNER"),
     );
 
   return [
@@ -137,6 +154,7 @@ export function buildPanelComponents(userId: string): ActionRowBuilder<ButtonBui
     new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder().setCustomId("panel:status").setLabel("📊 Statut").setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId("panel:profile").setLabel("👤 Profil").setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId("panel:stats").setLabel("📈 Stats").setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId("panel:help").setLabel("❓ Aide").setStyle(ButtonStyle.Secondary),
     ),
   ] as ActionRowBuilder<ButtonBuilder | StringSelectMenuBuilder>[];
@@ -222,12 +240,25 @@ export async function handlePanelButton(ctx: BotContext, interaction: ButtonInte
   if (interaction.customId === "panel:status") {
     const matchId = ctx.sessions.getUserMatch(userId);
     const since = await ctx.matchmaker.waitingSince(userId);
+    const profile = await ctx.storage.getProfile(userId);
     const text = matchId
       ? "💬 Tu es en match."
       : since
         ? `⏳ Tu es en file depuis ${Math.round((Date.now() - since) / 1000)}s.`
         : "🟢 Disponible, pas en file.";
-    await interaction.reply({ content: text, ephemeral: true });
+
+    const embed = new EmbedBuilder()
+      .setTitle("📊 Ton Statut")
+      .setDescription(text)
+      .setColor(0x3498db)
+      .addFields(
+        { name: "🔥 Streak", value: `${profile?.streak ?? 0} matchs`, inline: true },
+        { name: "🤝 Total matchs", value: `${profile?.totalMatches ?? 0}`, inline: true },
+        { name: "📈 Niveau", value: `${profile?.level ?? 1}`, inline: true },
+      )
+      .setTimestamp();
+
+    await interaction.reply({ embeds: [embed], ephemeral: true });
     return;
   }
 
@@ -241,23 +272,54 @@ export async function handlePanelButton(ctx: BotContext, interaction: ButtonInte
     return;
   }
 
+  if (interaction.customId === "panel:stats") {
+    const profile = await ctx.storage.getProfile(userId);
+    const stats = await ctx.storage.getStats();
+
+    const embed = new EmbedBuilder()
+      .setTitle(`📊 Statistiques de ${interaction.user.username}`)
+      .setThumbnail(interaction.user.displayAvatarURL({ size: 256 }))
+      .setColor(0x3498db)
+      .addFields(
+        { name: "🤝 Matchs total", value: `**${profile?.totalMatches ?? 0}**`, inline: true },
+        { name: "🔥 Streak", value: `**${profile?.streak ?? 0}**`, inline: true },
+        { name: "📈 Niveau", value: `**${profile?.level ?? 1}**`, inline: true },
+        { name: "🌐 En ligne", value: `**${stats.onlineUsers}**`, inline: true },
+        { name: "📅 Aujourd'hui", value: `**${stats.matchesToday}**`, inline: true },
+      )
+      .setTimestamp();
+
+    await interaction.reply({ embeds: [embed], ephemeral: true });
+    return;
+  }
+
   if (interaction.customId === "panel:help") {
     await interaction.reply({
       embeds: [
         new EmbedBuilder()
           .setTitle("❓ Aide — Matchmaking Platform")
-          .setColor(WHITE)
+          .setColor(0x5865f2)
           .setDescription(
             [
-              "`/profile` — crée/édite ton profil",
-              "`/panel` — ouvre le panel fixe du serveur",
-              "`/queue` — statut de la file",
-              "`/next` — nouveau partenaire",
-              "`/leave` — quitte match/file",
-              "`/report` — signale ton partenaire",
-              "`/block` — bloque ton partenaire",
+              "**Commandes disponibles :**",
+              "",
+              "📝 `/profile` — Crée ou modifie ton profil",
+              "👤 `/profile-view` — Voir un profil complet",
+              "🔍 `/match` — Rejoins la file d'attente",
+              "⏭️ `/next` — Trouve un nouveau partenaire",
+              "🚪 `/leave` — Quitte le match ou la file",
+              "📊 `/queue` — Voir ton statut en file",
+              "📈 `/stats` — Tes statistiques",
+              "🏆 `/leaderboard` — Classement",
+              "🎲 `/daily` — Défi du jour",
+              "💌 `/confess` — Message anonyme",
+              "🚫 `/report` — Signaler un partenaire",
+              "⛔ `/block` — Bloquer un partenaire",
+              "❓ `/help` — Cette aide",
             ].join("\n"),
-          ),
+          )
+          .setFooter({ text: "Matchmaking Platform" })
+          .setTimestamp(),
       ],
       ephemeral: true,
     });
@@ -273,8 +335,9 @@ export async function handlePanelSelect(_ctx: BotContext, interaction: StringSel
   const current = prefsOf(userId);
   if (interaction.customId === "panel:mode") userPrefs.set(userId, { ...current, mode: value as MatchMode });
   if (interaction.customId === "panel:scope") userPrefs.set(userId, { ...current, scope: value as MatchScope });
+  const emoji = interaction.customId === "panel:mode" ? "📝" : "🌍";
   const label = interaction.customId === "panel:mode" ? "Mode" : "Portée";
-  await interaction.reply({ content: `✅ ${label} défini(e) sur **${value}**.`, ephemeral: true });
+  await interaction.reply({ content: `${emoji} **${label}** défini(e) sur **${value}**.`, ephemeral: true });
 }
 
 export const panelCommand = {

@@ -20,6 +20,16 @@ export interface CoreProfile {
   isPremium: boolean;
   reputation: number;
   level: number;
+  xp?: number;
+  badges?: string[];
+  customColor?: string;
+  lookingFor?: string;
+  socials?: string[];
+  likesReceived?: number;
+  totalMatches?: number;
+  streak?: number;
+  bestStreak?: number;
+  lastMatchAt?: number;
 }
 
 export interface MatchRecord {
@@ -38,6 +48,14 @@ export interface PlatformStats {
   waiting: number;
   activeMatches: number;
   onlineUsers: number;
+}
+
+export interface Confession {
+  id: string;
+  authorId: string;
+  content: string;
+  channelId: string;
+  createdAt: number;
 }
 
 /**
@@ -64,4 +82,8 @@ export interface Storage {
   logActivity(type: string, payload?: Record<string, unknown>): Promise<void>;
 
   getStats(): Promise<PlatformStats>;
+
+  getAllProfiles?(): Promise<CoreProfile[]>;
+  addConfession?(c: Confession): Promise<void>;
+  getConfessions?(channelId: string, limit?: number): Promise<Confession[]>;
 }
