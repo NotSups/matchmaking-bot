@@ -1,11 +1,25 @@
 // Entry point for Node-based hosting panels (Pterodactyl / wispbyte).
-// The panel runs `node /home/container/${JS_FILE}`; we use this shim to boot
-// the TypeScript bot through tsx (no separate build step required).
-const { spawnSync } = require("node:child_process");
+const { spawnSync, spawn } = require("node:child_process");
 const { join } = require("node:path");
+const fs = require("node:fs");
+
+const tsxBin = join(__dirname, "node_modules", ".bin", "tsx");
+
+// Auto-install dependencies if node_modules is missing
+if (!fs.existsSync(tsxBin)) {
+  console.log("[matchmaking] Installing dependencies...");
+  const install = spawnSync("npm", ["install"], {
+    stdio: "inherit",
+    cwd: __dirname,
+  });
+  if (install.status !== 0) {
+    console.error("[matchmaking] npm install failed!");
+    process.exit(1);
+  }
+  console.log("[matchmaking] Dependencies installed!");
+}
 
 const entry = join(__dirname, "packages", "bot", "src", "index.ts");
-const tsxBin = join(__dirname, "node_modules", ".bin", "tsx");
 
 const res = spawnSync(tsxBin, [entry], {
   stdio: "inherit",
